@@ -1,18 +1,19 @@
-import { Notice, Plugin, TFile } from 'obsidian';
+import { Notice, Plugin, TFile, moment } from 'obsidian';
 import {
 	DEFAULT_SETTINGS,
-	MyPluginSettings,
-	SampleSettingTab,
+	DateLinkerSettings,
+	DateLinkerSettingTab,
 } from './settings';
+// import moment from 'moment';
 
-export default class MyPlugin extends Plugin {
-	settings!: MyPluginSettings;
+export default class DateLinker extends Plugin {
+	settings!: DateLinkerSettings;
 
 	async onload() {
 		await this.loadSettings();
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new DateLinkerSettingTab(this.app, this));
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
@@ -24,7 +25,7 @@ export default class MyPlugin extends Plugin {
 			id: 'update-managed-relations-all-files',
 			name: 'Update managed relations for all files',
 			callback: () => {
-				this.processFrontmatterForAllFiles();
+				void this.processFrontmatterForAllFiles();
 			},
 		});
 		this.addCommand({
@@ -36,7 +37,7 @@ export default class MyPlugin extends Plugin {
 				if (!activeFile) {
 					return;
 				}
-				this.processFrontmatterForFile(activeFile);
+				void this.processFrontmatterForFile(activeFile);
 				new Notice(`Processed note.`);
 			},
 		});
@@ -49,7 +50,7 @@ export default class MyPlugin extends Plugin {
 		let modifiedCount = 0;
 
 		for (const file of files) {
-			this.processFrontmatterForFile(file);
+			void this.processFrontmatterForFile(file);
 			modifiedCount++;
 		}
 
@@ -67,9 +68,16 @@ export default class MyPlugin extends Plugin {
 				'linkProbertyDatesToDailyNote',
 			)
 		) {
-			const propertysToCheckForDates: Array<string> =
-				frontmatter['linkProbertyDatesToDailyNote'];
-			let managedRelations = [];
+			const rawValue = frontmatter[
+				'linkProbertyDatesToDailyNote'
+			] as unknown;
+			const propertysToCheckForDates: string[] = Array.isArray(rawValue)
+				? (rawValue as string[])
+				: typeof rawValue === 'string'
+					? [rawValue]
+					: [];
+
+			let managedRelations: Array<object> = [];
 
 			// extract dates
 			for (const property of propertysToCheckForDates) {
@@ -80,8 +88,8 @@ export default class MyPlugin extends Plugin {
 					continue;
 				}
 
-				const dateRaw = frontmatter[property];
-				const parsedDate = window.moment(
+				const dateRaw: string = frontmatter[property] as string;
+				const parsedDate: moment.Moment = window.moment(
 					dateRaw,
 					'YYYY-MM-DDTHH:mm:ssZ',
 				); // importing moment from 'obsidian' doesn't work atm
@@ -96,9 +104,12 @@ export default class MyPlugin extends Plugin {
 				managedRelations.push(relation);
 			}
 
-			this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-				frontmatter['managed-relations'] = managedRelations;
-			});
+			await this.app.fileManager.processFrontMatter(
+				file,
+				(frontmatter: Record<string, unknown>) => {
+					frontmatter['managed-relations'] = managedRelations;
+				},
+			);
 		}
 	}
 
@@ -106,7 +117,7 @@ export default class MyPlugin extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<MyPluginSettings>,
+			(await this.loadData()) as Partial<DateLinkerSettings>,
 		);
 	}
 

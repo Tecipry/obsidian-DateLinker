@@ -2,7 +2,7 @@
 	"id": "date-linker",
 	"name": "Date Linker",
 	"version": "1.0.0",
-	"minAppVersion": "1.0.0",
+	"minAppVersion": "1.4.4",
 	"description": "Creates links to daily notes from frontmatter Date / Date & Time property types.",
 	"author": "Tecipry",
 	"isDesktopOnly": false
