@@ -15,8 +15,7 @@ There are two ways to trigger link creation from these watched properties:
 
 In order to create the links, the plugin creates it's own frontmatter field named `DL-managedRelations` (this default can also be changed in the settings).
 
-> [!NOTE]- Example
-> Let's say you have a note with the following frontmatter:
+> EXAMPLE: Let's say you have a note with the following frontmatter:
 > ```md
 > aliases:
 > created: 2026-09-15T19:27:41Z
