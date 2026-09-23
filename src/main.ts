@@ -1,13 +1,13 @@
-import { Notice, Plugin, TFile, moment } from 'obsidian';
+import { CachedMetadata, Notice, Plugin, TFile, moment } from 'obsidian';
 import {
 	DEFAULT_SETTINGS,
 	DateLinkerSettings,
 	DateLinkerSettingTab,
 } from './settings';
-// import moment from 'moment';
 
 export default class DateLinker extends Plugin {
 	settings!: DateLinkerSettings;
+	private frontmatterHashes = new Map<string, string>();
 
 	async onload() {
 		await this.loadSettings();
@@ -15,11 +15,20 @@ export default class DateLinker extends Plugin {
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new DateLinkerSettingTab(this.app, this));
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		// this.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
-		// 	new Notice('Click');
-		// });
+		if (this.settings.automaticallyWatchFilesForFrontmatterChanges) {
+			this.registerEvent(
+				this.app.metadataCache.on("changed", (file: TFile, data: string, cache: CachedMetadata) => {
+					// check for frontmatter change
+					// maybe the field storing the managed relations should be excluded here. Currently, this reports a frontmatter change two times in a row
+					const fmHash = JSON.stringify(cache.frontmatter ?? {});
+					const storedHash = this.frontmatterHashes.get(file.path)
+					if (storedHash === fmHash) { return; }
+					this.frontmatterHashes.set(file.path, fmHash);
+
+					void this.processFrontmatterForFile(file);
+				})
+			);
+		}
 
 		this.addCommand({
 			id: 'update-managed-relations-all-files',
@@ -43,7 +52,7 @@ export default class DateLinker extends Plugin {
 		});
 	}
 
-	onunload() {}
+	onunload() { }
 
 	async processFrontmatterForAllFiles(): Promise<void> {
 		const files: TFile[] = this.app.vault.getMarkdownFiles();
@@ -58,18 +67,18 @@ export default class DateLinker extends Plugin {
 	}
 
 	async processFrontmatterForFile(file: TFile): Promise<void> {
-		const cache = this.app.metadataCache.getFileCache(file);
-		const frontmatter = cache?.frontmatter;
+		const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+		// const frontmatter = cache?.frontmatter;
 
 		if (
 			frontmatter &&
 			Object.prototype.hasOwnProperty.call(
 				frontmatter,
-				'linkProbertyDatesToDailyNote',
+				this.settings.watchedPropertysFrontmatterFieldName || DEFAULT_SETTINGS.watchedPropertysFrontmatterFieldName,
 			)
 		) {
 			const rawValue = frontmatter[
-				'linkProbertyDatesToDailyNote'
+				this.settings.watchedPropertysFrontmatterFieldName || DEFAULT_SETTINGS.watchedPropertysFrontmatterFieldName
 			] as unknown;
 			const propertysToCheckForDates: string[] = Array.isArray(rawValue)
 				? (rawValue as string[])
@@ -99,7 +108,7 @@ export default class DateLinker extends Plugin {
 
 				const relation = {
 					property: property,
-					link: `[[${parsedDate.format('DD.MM.YYYY')}]]`,
+					link: `[[${parsedDate.format(this.settings.dailyNoteNameFormat || DEFAULT_SETTINGS.dailyNoteNameFormat)}]]`,
 				};
 				managedRelations.push(relation);
 			}
@@ -107,7 +116,7 @@ export default class DateLinker extends Plugin {
 			await this.app.fileManager.processFrontMatter(
 				file,
 				(frontmatter: Record<string, unknown>) => {
-					frontmatter['managed-relations'] = managedRelations;
+					frontmatter[this.settings.managedRelationsPropertyName || DEFAULT_SETTINGS.managedRelationsPropertyName] = managedRelations;
 				},
 			);
 		}
