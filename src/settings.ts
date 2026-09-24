@@ -28,15 +28,15 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 
 	getSettingDefinitions() {
 		return [
-			{
-				name: 'DailyNote name format',
-				desc: 'momentjs format string to determine the name of your daily note',
-				control: {
-					type: 'text',
-					key: 'dailyNoteNameFormat',
-					placeholder: DEFAULT_SETTINGS.dailyNoteNameFormat,
-				},
-			},
+			// {
+			// 	name: 'DailyNote name format',
+			// 	desc: 'momentjs format string to determine the name of your daily note',
+			// 	control: {
+			// 		type: 'text',
+			// 		key: 'dailyNoteNameFormat',
+			// 		placeholder: DEFAULT_SETTINGS.dailyNoteNameFormat,
+			// 	},
+			// },
 			{
 				name: 'Frontmatter field name to define watched properties',
 				desc: 'Use this frontmatter field to list the properties, for which links should be created in the corresponding note',

@@ -4,10 +4,18 @@ import {
 	DateLinkerSettings,
 	DateLinkerSettingTab,
 } from './settings';
+import {
+	appHasDailyNotesPluginLoaded,
+	getDailyNoteSettings,
+	IPeriodicNoteSettings,
+} from "obsidian-daily-notes-interface";
 
 export default class DateLinker extends Plugin {
 	settings!: DateLinkerSettings;
-	private frontmatterHashes = new Map<string, string>();
+	frontmatterHashes = new Map<string, string>();
+
+	dailyNoteSettings: IPeriodicNoteSettings = getDailyNoteSettings();
+	dailyNotesFormat: string = `${this.dailyNoteSettings.folder}/${this.dailyNoteSettings.format}`;
 
 	async onload() {
 		await this.loadSettings();
@@ -15,18 +23,27 @@ export default class DateLinker extends Plugin {
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new DateLinkerSettingTab(this.app, this));
 
+		console.log(this.dailyNotesFormat);
+
 		if (this.settings.automaticallyWatchFilesForFrontmatterChanges) {
 			this.registerEvent(
-				this.app.metadataCache.on("changed", (file: TFile, data: string, cache: CachedMetadata) => {
-					// check for frontmatter change
-					// maybe the field storing the managed relations should be excluded here. Currently, this reports a frontmatter change two times in a row
-					const fmHash = JSON.stringify(cache.frontmatter ?? {});
-					const storedHash = this.frontmatterHashes.get(file.path)
-					if (storedHash === fmHash) { return; }
-					this.frontmatterHashes.set(file.path, fmHash);
+				this.app.metadataCache.on(
+					'changed',
+					(file: TFile, data: string, cache: CachedMetadata) => {
+						// check for frontmatter change
+						// maybe the field storing the managed relations should be excluded here. Currently, this reports a frontmatter change two times in a row
+						const fmHash = JSON.stringify(cache.frontmatter ?? {});
+						const storedHash = this.frontmatterHashes.get(
+							file.path,
+						);
+						if (storedHash === fmHash) {
+							return;
+						}
+						this.frontmatterHashes.set(file.path, fmHash);
 
-					void this.processFrontmatterForFile(file);
-				})
+						void this.processFrontmatterForFile(file);
+					},
+				),
 			);
 		}
 
@@ -52,7 +69,7 @@ export default class DateLinker extends Plugin {
 		});
 	}
 
-	onunload() { }
+	onunload() {}
 
 	async processFrontmatterForAllFiles(): Promise<void> {
 		const files: TFile[] = this.app.vault.getMarkdownFiles();
@@ -67,59 +84,67 @@ export default class DateLinker extends Plugin {
 	}
 
 	async processFrontmatterForFile(file: TFile): Promise<void> {
-		const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-		// const frontmatter = cache?.frontmatter;
+		const frontmatter =
+			this.app.metadataCache.getFileCache(file)?.frontmatter;
 
+		// check whether note has frontmatter
 		if (
-			frontmatter &&
-			Object.prototype.hasOwnProperty.call(
-				frontmatter,
-				this.settings.watchedPropertysFrontmatterFieldName || DEFAULT_SETTINGS.watchedPropertysFrontmatterFieldName,
+			!(
+				frontmatter &&
+				Object.prototype.hasOwnProperty.call(
+					frontmatter,
+					this.settings.watchedPropertysFrontmatterFieldName ||
+						DEFAULT_SETTINGS.watchedPropertysFrontmatterFieldName,
+				)
 			)
 		) {
-			const rawValue = frontmatter[
-				this.settings.watchedPropertysFrontmatterFieldName || DEFAULT_SETTINGS.watchedPropertysFrontmatterFieldName
-			] as unknown;
-			const propertysToCheckForDates: string[] = Array.isArray(rawValue)
-				? (rawValue as string[])
-				: typeof rawValue === 'string'
-					? [rawValue]
-					: [];
+			return;
+		}
 
-			let managedRelations: Array<object> = [];
+		// get frontmatter
+		const rawValue = frontmatter[
+			this.settings.watchedPropertysFrontmatterFieldName ||
+				DEFAULT_SETTINGS.watchedPropertysFrontmatterFieldName
+		] as unknown;
+		const propertysToCheckForDates: string[] = Array.isArray(rawValue)
+			? (rawValue as string[])
+			: typeof rawValue === 'string'
+				? [rawValue]
+				: [];
 
-			// extract dates
-			for (const property of propertysToCheckForDates) {
-				if (
-					!Object.prototype.hasOwnProperty.call(frontmatter, property)
-				) {
-					// specified property is not in frontmatter
-					continue;
-				}
+		let managedRelations: Array<string> = [];
 
-				const dateRaw: string = frontmatter[property] as string;
-				const parsedDate: moment.Moment = window.moment(
-					dateRaw,
-					'YYYY-MM-DDTHH:mm:ssZ',
-				); // importing moment from 'obsidian' doesn't work atm
-				if (!parsedDate.isValid()) {
-					continue;
-				}
-
-				const relation = {
-					property: property,
-					link: `[[${parsedDate.format(this.settings.dailyNoteNameFormat || DEFAULT_SETTINGS.dailyNoteNameFormat)}]]`,
-				};
-				managedRelations.push(relation);
+		// extract dates
+		for (const property of propertysToCheckForDates) {
+			if (!Object.prototype.hasOwnProperty.call(frontmatter, property)) {
+				// specified property is not in frontmatter
+				continue;
 			}
 
-			await this.app.fileManager.processFrontMatter(
-				file,
-				(frontmatter: Record<string, unknown>) => {
-					frontmatter[this.settings.managedRelationsPropertyName || DEFAULT_SETTINGS.managedRelationsPropertyName] = managedRelations;
-				},
+			const dateRaw: string = frontmatter[property] as string;
+			const parsedDate: moment.Moment = moment(
+				dateRaw,
+				'YYYY-MM-DDTHH:mm:ssZ',
+			);
+			if (!parsedDate.isValid()) {
+				continue;
+			}
+
+			managedRelations.push(
+				`[[${parsedDate.format(this.settings.dailyNoteNameFormat || DEFAULT_SETTINGS.dailyNoteNameFormat)}]]`,
 			);
 		}
+
+		// write dates into managedRelations
+		await this.app.fileManager.processFrontMatter(
+			file,
+			(frontmatter: Record<string, unknown>) => {
+				frontmatter[
+					this.settings.managedRelationsPropertyName ||
+						DEFAULT_SETTINGS.managedRelationsPropertyName
+				] = managedRelations;
+			},
+		);
 	}
 
 	async loadSettings() {

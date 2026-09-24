@@ -25,6 +25,7 @@
 		"typescript-eslint": "^8.59.1"
 	},
 	"dependencies": {
-		"moment": "^2.31.0"
+		"moment": "^2.31.0",
+		"obsidian-daily-notes-interface": "^0.9.5"
 	}
 }

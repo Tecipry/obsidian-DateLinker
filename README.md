@@ -47,10 +47,8 @@ In order to create the links, the plugin creates it's own frontmatter field name
 > After using the `Update managed relations for this file` command (or when `Automatically update managed relations when frontmatter updates` is already enabled), a new property field is added by DateLinker:
 > ```md
 > DL-managedRelations:
->   - property: started
-> 	link: "[[2026-09-16]]"
->   - property: completed
-> 	link: "[[2026-09-20]]"
+>   - "[[2026-09-16]]"
+>   - "[[2026-09-20]]"
 > ```
 > The outgoing links now show the connection:
 > 
