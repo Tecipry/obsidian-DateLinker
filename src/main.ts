@@ -19,8 +19,6 @@ export default class DateLinker extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// console.log(this.settings.globallyWatchedProperties);
-
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new DateLinkerSettingTab(this.app, this));
 
@@ -40,7 +38,7 @@ export default class DateLinker extends Plugin {
 						}
 						this.frontmatterHashes.set(file.path, fmHash);
 
-						void this.processFrontmatterForFile(file);
+						void this.processFrontmatterForSingleFile(file);
 					},
 				),
 			);
@@ -61,7 +59,7 @@ export default class DateLinker extends Plugin {
 				if (!activeFile) {
 					return;
 				}
-				void this.processFrontmatterForFile(activeFile);
+				void this.processFrontmatterForSingleFile(activeFile);
 				new Notice(`Processed note.`);
 			},
 		});
@@ -74,14 +72,14 @@ export default class DateLinker extends Plugin {
 		let modifiedCount = 0;
 
 		for (const file of files) {
-			void this.processFrontmatterForFile(file);
+			void this.processFrontmatterForSingleFile(file);
 			modifiedCount++;
 		}
 
 		new Notice(`Processed ${modifiedCount} note(s).`);
 	}
 
-	async processFrontmatterForFile(file: TFile): Promise<void> {
+	async processFrontmatterForSingleFile(file: TFile): Promise<void> {
 		const frontmatter =
 			this.app.metadataCache.getFileCache(file)?.frontmatter;
 
@@ -98,7 +96,7 @@ export default class DateLinker extends Plugin {
 			return;
 		}
 
-		// get frontmatter
+		// get frontmatter & concat with globallyWatchedProperties
 		const rawValue = frontmatter[
 			this.settings.watchedPropertysFrontmatterFieldName
 		] as unknown;
@@ -147,7 +145,7 @@ export default class DateLinker extends Plugin {
 		const saved = ((await this.loadData()) ??
 			{}) as Partial<DateLinkerSettings>;
 
-		// Keep only values that were actually set, use DEFAULT for others
+		// use default values for not-set properties
 		const cleaned = Object.fromEntries(
 			Object.entries(saved).filter(
 				([, value]) =>
