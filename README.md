@@ -1,3 +1,5 @@
+Creates links to daily notes from frontmatter Date / Date & Time property types.
+
 # Date Linker
 Frontmatter of a note can contain date information, which Obsidian can display as either a "Date" or "Date & Time" type. 
 Date Linker enables the creation of links to corresponding daily notes from these dates in the frontmatter of a note. 
