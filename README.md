@@ -3,61 +3,67 @@ Frontmatter of a note can contain date information, which Obsidian can display a
 Date Linker enables the creation of links to corresponding daily notes from these dates in the frontmatter of a note. 
 These links are created as a seperate frontmatter property. From there, they're picked up by Obsidian which leads to them being handled like every other link in your Vault.
 
+I created this plugin primarly for my personal use, as I couldn't find anything else to achieve this linking functionality.
+I consider it feature complete regarding my own usecase - but if you need some functionality, feel free to open a feature request and I will consider it.
+
 # Setup & Usage
-Date Linker does nothing until explicitly configured. 
-Linking behaviour for a note is configured by setting `DL-watchedProperties` as a frontmatter property in the note (property name can be changed in the settings). 
-Date Linker will try to create links for every property listed in `DL-watchedProperties`.
-The values need to follow [ISO 8601](https://de.wikipedia.org/wiki/ISO_8601) in order to be parseable.
-Basically: If Obsidian detects them as a date (and displays them as such in the preview mode), Date Linker will be able to work with it.
-
-There are two ways to trigger link creation from these watched properties:
-1. Using the command palette
+Date Linker does nothing until explicitly configured.
+Properties for which links should be created are called 'watched properties'.
+These watched properties can be configured in two different ways:
+1. On a per-note level:
 	
-	There are two commands to either update the managed relations of the currently active file or to update the managed relations of all files in the vault. 
-	They're named `Update managed relations for this file` and `Update managed relations for all files` accordingly. 
-	This is mainly useful during setup, allowing you to better understand it's behaviour before letting it loose on your whole vault.
+	Define the frontmatter field `DL-watchedProperties` in a note and set it's value to a list of property names.
+2. On a global level: 
 
-2. Automatically updating on frontmatter change
+	Go to settings and add names of frontmatter keys under "Globally watched properties".
 
-	When enabling `Automatically update managed relations when frontmatter updates` in the settings, Date Linker will automatically watch for frontmatter changes and update the managed links accordingly. 
-	The same behaviour can be achieved by using the command `Update managed relations for this file` every time after changing the frontmatter of a file.
+When updating the managed relations for a file, Date Linker will combine per-note watched properties with the global ones and search for each one in the frontmatter of the note.
+When a field is identified, it tries to parse a date from it.
+In order for this to work, the value should follow the [ISO 8601](https://de.wikipedia.org/wiki/ISO_8601) standard.
+If a date can be extracted, Date Linker will generate a link to the corresponding dailyNote (using the same file format as defined in the settings of the dailyNotes plugin) and store it using the frontmatter field `DL-managedRelations` (name can be changed in the settings).
+This link is then picked up by obsidian and treated as a normal link.
 
-In order to create the links, the plugin creates it's own frontmatter field named `DL-managedRelations` (this default can also be changed in the settings).
+Note that this plugin expects full control over this managed relations property field.
+Don't mix it with other properties you might be using for relationship management in your frontmatter.
 
----
-> Example 
-> 
-> Let's say you have a note with the following frontmatter:
-> ```md
-> aliases:
-> created: 2026-09-15T19:27:41Z
-> started: 2026-09-16T20:53:04Z
-> completed: 2026-09-20
-> tags:
->   - testNote
->   - plugin
->   - development
-> ```
-> You might want to link the corresponding daily note for the `started` and `completed` property, but not for `created`. So we add the following to the frontmatter:
-> ```md
-> DL-watchedProperties:
->   - started
->   - completed
-> ```
-> After using the `Update managed relations for this file` command (or when `Automatically update managed relations when frontmatter updates` is already enabled), a new property field is added by DateLinker:
-> ```md
-> DL-managedRelations:
->   - "[[2026-09-16]]"
->   - "[[2026-09-20]]"
-> ```
-> The outgoing links now show the connection:
-> 
-> ![](assets/outgoingLinks.png)
----
+## Example
+Let's say you have a note with the following frontmatter:
+```yaml
+created: 2026-09-15T19:27:41Z
+started: 2026-09-16T20:53:04Z
+completed: 2026-09-20
+tags:
+  - testNote
+  - plugin
+  - development
+```
+Cou can add a per-note watched property by adding the following frontmatter:
+```yaml
+DL-watchedProperties:
+  - started
+```
+As soon as the managed relations for this note are updated, this will create a link to the corresponding daily note for the 16th of September 2026.
+Other notes with a `started` property are completely unaffected.
 
-This configuration on a per-note level is well suited for workflows that include templated note creation. 
-Just add `DL-watchedProperties` in your template and Date Linker will insert the links after a note was created from the template.
+In order to create a link for the `completed` field in every note with such a field, add "completed" as a globally watched property in the settings.
+Now, every note with a `completed` frontmatter field will be affected.
 
-# Additional features I currently plan to work on
-- Globally watched properties. Set properties which should always create a link to the daily note without them being listed as a watched property on a note-level.
-- Ability to hide the managed relations field when not in source mode. There are already other plugins which can hide frontmatter fields and as far as I know, it only requires a bit of css.
+For this example, Date Linker will add the following to the frontmatter of this note (assuming the format for the daily notes is "YYYY-MM-DD"):
+```yaml
+DL-managedRelations:
+  - "[[2026-09-15]]"
+  - "[[2026-20-09]]"
+```
+
+## Updating managed relations
+Date Linker exposes two commands:
+1. `Update managed relations for this file`
+2. `Update managed relations for all files`
+
+You might be able to guess what they do, based on their names.
+These commands are mainly useful during setup, alowing you to get a better understanding of the changes the plugin performs on your frontmatter.
+
+There is also a toggle in the settings page to automatically update the managed relations for a file when the frontmatter updates.
+Having this toggle enabled is the same as using `Update managed relations for this file` after every frontmatter edit of a file.
+The plugin will only mass-edit frontmatter if you invoke the `Update managed relations for all files` command.
+
