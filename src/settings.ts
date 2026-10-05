@@ -1,24 +1,26 @@
-import { App, PluginSettingTab } from 'obsidian';
+import {
+	App,
+	PluginSettingTab,
+	Setting,
+	SettingDefinitionItem,
+} from 'obsidian';
 import MyPlugin from './main';
 
 export interface DateLinkerSettings {
-	dailyNoteNameFormat: string;
 	watchedPropertysFrontmatterFieldName: string;
 	managedRelationsPropertyName: string;
 	automaticallyWatchFilesForFrontmatterChanges: boolean;
+	globallyWatchedProperties: Array<string>;
 }
 
 export const DEFAULT_SETTINGS: DateLinkerSettings = {
-	dailyNoteNameFormat: 'YYYY-MM-DD',
 	watchedPropertysFrontmatterFieldName: 'DL-watchedProperties',
 	managedRelationsPropertyName: 'DL-managedRelations',
 	automaticallyWatchFilesForFrontmatterChanges: false,
+	globallyWatchedProperties: [],
 };
 
 export class DateLinkerSettingTab extends PluginSettingTab {
-	display(): void {
-		throw new Error('Method not implemented.');
-	}
 	plugin: MyPlugin;
 
 	constructor(app: App, plugin: MyPlugin) {
@@ -26,24 +28,17 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	getSettingDefinitions() {
+	getSettingDefinitions(): SettingDefinitionItem<string>[] {
+		const globallyWatchedProperties =
+			this.plugin.settings.globallyWatchedProperties;
+
 		return [
-			// {
-			// 	name: 'DailyNote name format',
-			// 	desc: 'momentjs format string to determine the name of your daily note',
-			// 	control: {
-			// 		type: 'text',
-			// 		key: 'dailyNoteNameFormat',
-			// 		placeholder: DEFAULT_SETTINGS.dailyNoteNameFormat,
-			// 	},
-			// },
 			{
 				name: 'Frontmatter field name to define watched properties',
 				desc: 'Use this frontmatter field to list the properties, for which links should be created in the corresponding note',
 				control: {
 					type: 'text',
 					key: 'watchedPropertysFrontmatterFieldName',
-					placeholder: DEFAULT_SETTINGS.watchedPropertysFrontmatterFieldName,
 				},
 			},
 			{
@@ -52,7 +47,6 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 				control: {
 					type: 'text',
 					key: 'managedRelationsPropertyName',
-					placeholder: DEFAULT_SETTINGS.managedRelationsPropertyName,
 				},
 			},
 			{
@@ -61,8 +55,57 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 				control: {
 					type: 'toggle',
 					key: 'automaticallyWatchFilesForFrontmatterChanges',
-					placeholder: DEFAULT_SETTINGS.automaticallyWatchFilesForFrontmatterChanges,
 				},
+			},
+			{
+				type: 'list',
+				heading: 'Globally watched properties',
+				desc: 'These properties will be watched on every note, without the need to add them as a watched property on every note.',
+				emptyState: 'No globally watched properties yet.',
+				addItem: {
+					name: 'Add property',
+					action: () => {
+						globallyWatchedProperties.push('');
+						this.update();
+					},
+				},
+				onReorder: (oldIndex: number, newIndex: number) => {
+					const [moved] = globallyWatchedProperties.splice(
+						oldIndex,
+						1,
+					);
+					if (moved == null) {
+						return;
+					}
+					globallyWatchedProperties.splice(newIndex, 0, moved);
+					void this.plugin.saveData(this.plugin.settings); // !would fail silently in case of error
+					this.update();
+				},
+				onDelete: (index: number) => {
+					this.plugin.settings.globallyWatchedProperties.splice(
+						index,
+						1,
+					);
+					void this.plugin.saveData(this.plugin.settings); // !would fail silently in case of error
+					this.update();
+				},
+				items: globallyWatchedProperties.map((property, index) => ({
+					name: property || 'Property',
+					searchable: false,
+					render: (setting: Setting) => {
+						setting.addText((text) =>
+							text
+								.setValue(property)
+								.setPlaceholder('e.g. completedDate')
+								.onChange(async (value) => {
+									globallyWatchedProperties[index] = value;
+									await this.plugin.saveData(
+										this.plugin.settings,
+									);
+								}),
+						);
+					},
+				})),
 			},
 		];
 	}

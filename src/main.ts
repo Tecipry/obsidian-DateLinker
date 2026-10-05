@@ -5,25 +5,22 @@ import {
 	DateLinkerSettingTab,
 } from './settings';
 import {
-	appHasDailyNotesPluginLoaded,
 	getDailyNoteSettings,
 	IPeriodicNoteSettings,
-} from "obsidian-daily-notes-interface";
+} from 'obsidian-daily-notes-interface';
 
 export default class DateLinker extends Plugin {
 	settings!: DateLinkerSettings;
 	frontmatterHashes = new Map<string, string>();
 
 	dailyNoteSettings: IPeriodicNoteSettings = getDailyNoteSettings();
-	dailyNotesFormat: string = `${this.dailyNoteSettings.folder}/${this.dailyNoteSettings.format}`;
+	dailyNotesFormat: string = `${this.dailyNoteSettings.format}`;
 
 	async onload() {
 		await this.loadSettings();
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new DateLinkerSettingTab(this.app, this));
-
-		console.log(this.dailyNotesFormat);
 
 		if (this.settings.automaticallyWatchFilesForFrontmatterChanges) {
 			this.registerEvent(
@@ -93,8 +90,7 @@ export default class DateLinker extends Plugin {
 				frontmatter &&
 				Object.prototype.hasOwnProperty.call(
 					frontmatter,
-					this.settings.watchedPropertysFrontmatterFieldName ||
-						DEFAULT_SETTINGS.watchedPropertysFrontmatterFieldName,
+					this.settings.watchedPropertysFrontmatterFieldName,
 				)
 			)
 		) {
@@ -103,8 +99,7 @@ export default class DateLinker extends Plugin {
 
 		// get frontmatter
 		const rawValue = frontmatter[
-			this.settings.watchedPropertysFrontmatterFieldName ||
-				DEFAULT_SETTINGS.watchedPropertysFrontmatterFieldName
+			this.settings.watchedPropertysFrontmatterFieldName
 		] as unknown;
 		const propertysToCheckForDates: string[] = Array.isArray(rawValue)
 			? (rawValue as string[])
@@ -131,7 +126,7 @@ export default class DateLinker extends Plugin {
 			}
 
 			managedRelations.push(
-				`[[${parsedDate.format(this.settings.dailyNoteNameFormat || DEFAULT_SETTINGS.dailyNoteNameFormat)}]]`,
+				`[[${parsedDate.format(this.dailyNotesFormat)}]]`,
 			);
 		}
 
@@ -139,20 +134,24 @@ export default class DateLinker extends Plugin {
 		await this.app.fileManager.processFrontMatter(
 			file,
 			(frontmatter: Record<string, unknown>) => {
-				frontmatter[
-					this.settings.managedRelationsPropertyName ||
-						DEFAULT_SETTINGS.managedRelationsPropertyName
-				] = managedRelations;
+				frontmatter[this.settings.managedRelationsPropertyName] =
+					managedRelations;
 			},
 		);
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<DateLinkerSettings>,
-		);
+		const saved = ((await this.loadData()) ?? {}) as Partial<DateLinkerSettings>;
+
+		// Keep only values that were actually set, use DEFAULT for others
+		const cleaned = Object.fromEntries(
+			Object.entries(saved).filter(
+				([, value]) =>
+					value !== undefined && value !== null && value !== '',
+			),
+		) as Partial<DateLinkerSettings>;
+
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, cleaned);
 	}
 
 	async saveSettings() {
