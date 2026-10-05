@@ -1,10 +1,10 @@
 import {
 	App,
 	PluginSettingTab,
-	Setting,
 	SettingDefinitionItem,
 } from 'obsidian';
 import MyPlugin from './main';
+import { AddEntryModal } from './modals';
 
 export interface DateLinkerSettings {
 	watchedPropertysFrontmatterFieldName: string;
@@ -29,8 +29,20 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem<string>[] {
-		const globallyWatchedProperties =
-			this.plugin.settings.globallyWatchedProperties;
+		let globallyWatchedProperties: string[] =
+			this.plugin.settings.globallyWatchedProperties ?? [];
+
+		let openAddGlobalPropertyModal = () => {
+			new AddEntryModal(this.app, 'Name of property', (entry: string) => {
+				globallyWatchedProperties.push(entry);
+				// convert to set and back to array -> ensure unique entries
+				this.plugin.settings.globallyWatchedProperties =
+					Array.from(new Set(globallyWatchedProperties));
+
+				void this.plugin.saveData(this.plugin.settings);
+				this.update();
+			}).open();
+		};
 
 		return [
 			{
@@ -64,47 +76,19 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 				emptyState: 'No globally watched properties yet.',
 				addItem: {
 					name: 'Add property',
-					action: () => {
-						globallyWatchedProperties.push('');
-						this.update();
-					},
-				},
-				onReorder: (oldIndex: number, newIndex: number) => {
-					const [moved] = globallyWatchedProperties.splice(
-						oldIndex,
-						1,
-					);
-					if (moved == null) {
-						return;
-					}
-					globallyWatchedProperties.splice(newIndex, 0, moved);
-					void this.plugin.saveData(this.plugin.settings); // !would fail silently in case of error
-					this.update();
+					action: openAddGlobalPropertyModal,
 				},
 				onDelete: (index: number) => {
 					this.plugin.settings.globallyWatchedProperties.splice(
 						index,
 						1,
 					);
-					void this.plugin.saveData(this.plugin.settings); // !would fail silently in case of error
+					void this.plugin.saveData(this.plugin.settings); // will fail silently in case of error
 					this.update();
 				},
 				items: globallyWatchedProperties.map((property, index) => ({
 					name: property || 'Property',
 					searchable: false,
-					render: (setting: Setting) => {
-						setting.addText((text) =>
-							text
-								.setValue(property)
-								.setPlaceholder('e.g. completedDate')
-								.onChange(async (value) => {
-									globallyWatchedProperties[index] = value;
-									await this.plugin.saveData(
-										this.plugin.settings,
-									);
-								}),
-						);
-					},
 				})),
 			},
 		];

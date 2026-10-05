@@ -19,6 +19,8 @@ export default class DateLinker extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
+		// console.log(this.settings.globallyWatchedProperties);
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new DateLinkerSettingTab(this.app, this));
 
