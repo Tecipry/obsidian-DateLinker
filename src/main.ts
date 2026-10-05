@@ -58,7 +58,6 @@ export default class DateLinker extends Plugin {
 			name: 'Update managed relations for this file',
 			callback: () => {
 				const activeFile = this.app.workspace.getActiveFile();
-				// activeFile might be null
 				if (!activeFile) {
 					return;
 				}
@@ -103,11 +102,13 @@ export default class DateLinker extends Plugin {
 		const rawValue = frontmatter[
 			this.settings.watchedPropertysFrontmatterFieldName
 		] as unknown;
-		const propertysToCheckForDates: string[] = Array.isArray(rawValue)
-			? (rawValue as string[])
-			: typeof rawValue === 'string'
-				? [rawValue]
-				: [];
+		const propertysToCheckForDates: string[] = (
+			Array.isArray(rawValue)
+				? (rawValue as string[])
+				: typeof rawValue === 'string'
+					? [rawValue]
+					: []
+		).concat(this.settings.globallyWatchedProperties);
 
 		let managedRelations: Array<string> = [];
 
@@ -143,7 +144,8 @@ export default class DateLinker extends Plugin {
 	}
 
 	async loadSettings() {
-		const saved = ((await this.loadData()) ?? {}) as Partial<DateLinkerSettings>;
+		const saved = ((await this.loadData()) ??
+			{}) as Partial<DateLinkerSettings>;
 
 		// Keep only values that were actually set, use DEFAULT for others
 		const cleaned = Object.fromEntries(
