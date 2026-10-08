@@ -65,7 +65,7 @@ export default class DateLinker extends Plugin {
 		});
 	}
 
-	onunload() {}
+	onunload() { }
 
 	async processFrontmatterForAllFiles(): Promise<void> {
 		const files: TFile[] = this.app.vault.getMarkdownFiles();
@@ -84,15 +84,7 @@ export default class DateLinker extends Plugin {
 			this.app.metadataCache.getFileCache(file)?.frontmatter;
 
 		// check whether note has frontmatter
-		if (
-			!(
-				frontmatter &&
-				Object.prototype.hasOwnProperty.call(
-					frontmatter,
-					this.settings.watchedPropertysFrontmatterFieldName,
-				)
-			)
-		) {
+		if (!frontmatter) {
 			return;
 		}
 
