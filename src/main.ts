@@ -82,28 +82,27 @@ export default class DateLinker extends Plugin {
 	async processFrontmatterForSingleFile(file: TFile): Promise<void> {
 		const frontmatter =
 			this.app.metadataCache.getFileCache(file)?.frontmatter;
-
-		// check whether note has frontmatter
 		if (!frontmatter) {
 			return;
 		}
 
 		// get frontmatter & concat with globallyWatchedProperties
-		const rawValue = frontmatter[
+		const rawValue: string[] = frontmatter[
 			this.settings.watchedPropertysFrontmatterFieldName
-		] as unknown;
-		const propertysToCheckForDates: string[] = (
-			Array.isArray(rawValue)
-				? (rawValue as string[])
-				: typeof rawValue === 'string'
-					? [rawValue]
-					: []
-		).concat(this.settings.globallyWatchedProperties);
+		] as string[];
+
+		// Set to ensure uniqueness
+		const propertiesToCheckForDates: Set<string> = new Set(rawValue);
+		this.settings.globallyWatchedProperties.forEach(element => {
+			propertiesToCheckForDates.add(element);
+		});
+
+		console.log(propertiesToCheckForDates);
 
 		let managedRelations: Array<string> = [];
 
 		// extract dates
-		for (const property of propertysToCheckForDates) {
+		for (const property of propertiesToCheckForDates) {
 			if (!Object.prototype.hasOwnProperty.call(frontmatter, property)) {
 				// specified property is not in frontmatter
 				continue;
