@@ -97,8 +97,6 @@ export default class DateLinker extends Plugin {
 			propertiesToCheckForDates.add(element);
 		});
 
-		console.log(propertiesToCheckForDates);
-
 		let managedRelations: Array<string> = [];
 
 		// extract dates
