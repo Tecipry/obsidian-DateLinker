@@ -120,6 +120,17 @@ export default class DateLinker extends Plugin {
 			);
 		}
 
+		// remove frontmatter key if no relations (#TODO maybe create a setting for this?)
+		if (managedRelations.length === 0) {
+			await this.app.fileManager.processFrontMatter(
+				file,
+				(frontmatter: Record<string, unknown>) => {
+					delete frontmatter[this.settings.managedRelationsPropertyName];
+				},
+			)
+			return;
+		}
+
 		// write dates into managedRelations
 		await this.app.fileManager.processFrontMatter(
 			file,
