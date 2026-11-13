@@ -1,4 +1,11 @@
-import { CachedMetadata, Notice, Plugin, TFile, moment } from 'obsidian';
+import {
+	CachedMetadata,
+	Notice,
+	Plugin,
+	TFile,
+	getAllTags,
+	moment,
+} from 'obsidian';
 import {
 	DEFAULT_SETTINGS,
 	DateLinkerSettings,
@@ -79,20 +86,36 @@ export default class DateLinker extends Plugin {
 		new Notice(`Processed ${processedCount} note(s).`);
 	}
 
+	async getStrArrayIntersection(
+		arr1: Array<string>,
+		arr2: Array<string>,
+	): Promise<Array<string>> {
+		const set = new Set(arr1);
+		return arr2.filter((item) => set.has(item));
+	}
+
 	async processFrontmatterForSingleFile(file: TFile): Promise<void> {
+		const fileMetadata = this.app.metadataCache.getFileCache(file);
+		if (!fileMetadata) return;
+
 		for (let i = 0; i < this.settings.excludedFolders.length; i++) {
 			const excludedFolder = this.settings.excludedFolders[i];
 			const sliced = file.parent?.path.slice(0, excludedFolder?.length);
-			if (sliced === excludedFolder) {
-				return; // file is in excluded folder
-			}
+			if (sliced === excludedFolder) return; // file is in excluded folder
 		}
 
-		const frontmatter =
-			this.app.metadataCache.getFileCache(file)?.frontmatter;
+		const tagIntersection = await this.getStrArrayIntersection(
+			this.settings.excludedTags,
+			getAllTags(fileMetadata) ?? [],
+		);
+		if (tagIntersection.length > 0) return; // file has excluded tag
+
+		const frontmatter = fileMetadata.frontmatter;
 		if (!frontmatter) {
 			return; // no frontmatter
 		}
+
+		// --- Exclusion handling etc is done ---
 
 		// get frontmatter & concat with globallyWatchedProperties
 		const rawValue: string[] = frontmatter[
