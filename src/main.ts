@@ -63,27 +63,43 @@ export default class DateLinker extends Plugin {
 				new Notice(`Processed note.`);
 			},
 		});
+
+		this.addCommand({
+			id: 'print-settings',
+			name: 'DEBUG: print settings',
+			callback: () => {
+				console.log(this.settings);
+			},
+		});
 	}
 
-	onunload() { }
+	onunload() {}
 
 	async processFrontmatterForAllFiles(): Promise<void> {
 		const files: TFile[] = this.app.vault.getMarkdownFiles();
-		let modifiedCount = 0;
+		let processedCount = 0;
 
 		for (const file of files) {
 			void this.processFrontmatterForSingleFile(file);
-			modifiedCount++;
+			processedCount++;
 		}
 
-		new Notice(`Processed ${modifiedCount} note(s).`);
+		new Notice(`Processed ${processedCount} note(s).`);
 	}
 
 	async processFrontmatterForSingleFile(file: TFile): Promise<void> {
+		for (var i = 0; i < this.settings.excludedFolders.length; i++) {
+			const excludedFolder = this.settings.excludedFolders[i];
+			const sliced = file.parent?.path.slice(0, excludedFolder?.length);
+			if (sliced === excludedFolder) {
+				return; // file is in excluded folder
+			}
+		}
+
 		const frontmatter =
 			this.app.metadataCache.getFileCache(file)?.frontmatter;
 		if (!frontmatter) {
-			return;
+			return; // no frontmatter
 		}
 
 		// get frontmatter & concat with globallyWatchedProperties
@@ -93,7 +109,7 @@ export default class DateLinker extends Plugin {
 
 		// Set to ensure uniqueness
 		const propertiesToCheckForDates: Set<string> = new Set(rawValue);
-		this.settings.globallyWatchedProperties.forEach(element => {
+		this.settings.globallyWatchedProperties.forEach((element) => {
 			propertiesToCheckForDates.add(element);
 		});
 
@@ -125,9 +141,11 @@ export default class DateLinker extends Plugin {
 			await this.app.fileManager.processFrontMatter(
 				file,
 				(frontmatter: Record<string, unknown>) => {
-					delete frontmatter[this.settings.managedRelationsPropertyName];
+					delete frontmatter[
+						this.settings.managedRelationsPropertyName
+					];
 				},
-			)
+			);
 			return;
 		}
 
