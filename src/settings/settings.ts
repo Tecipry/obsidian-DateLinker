@@ -55,9 +55,6 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 	};
 
 	getSettingDefinitions(): SettingDefinitionItem<string>[] {
-		// let globallyWatchedProperties: string[] =
-		// 	this.plugin.settings.globallyWatchedProperties ?? [];
-
 		const settings = this.plugin.settings;
 
 		return [
@@ -88,7 +85,7 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 			{
 				type: 'list',
 				heading: 'Globally watched properties',
-				desc: 'These properties will be watched on every note, without the need to add them as a watched property on every note.',
+				desc: 'These properties will be watched on every note, without the need to add them as a watched property everywhere.',
 				emptyState: 'No globally watched properties yet.',
 				addItem: {
 					name: 'Add property',
@@ -110,7 +107,7 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 			{
 				type: 'list',
 				heading: 'Excluded Folders',
-				desc: '...',
+				desc: 'Notes within these folders will be excluded from processing.',
 				emptyState: 'No excluded folders yet.',
 				addItem: {
 					name: 'Add excluded folder',
@@ -129,10 +126,6 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 					searchable: false,
 				})),
 			},
-			// {
-			// 	name: 'Output folder',
-			// 	control: { type: 'folder', key: 'outputDir', includeRoot: true },
-			// },
 		];
 	}
 }

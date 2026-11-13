@@ -63,14 +63,6 @@ export default class DateLinker extends Plugin {
 				new Notice(`Processed note.`);
 			},
 		});
-
-		this.addCommand({
-			id: 'print-settings',
-			name: 'DEBUG: print settings',
-			callback: () => {
-				console.log(this.settings);
-			},
-		});
 	}
 
 	onunload() {}
@@ -88,7 +80,7 @@ export default class DateLinker extends Plugin {
 	}
 
 	async processFrontmatterForSingleFile(file: TFile): Promise<void> {
-		for (var i = 0; i < this.settings.excludedFolders.length; i++) {
+		for (let i = 0; i < this.settings.excludedFolders.length; i++) {
 			const excludedFolder = this.settings.excludedFolders[i];
 			const sliced = file.parent?.path.slice(0, excludedFolder?.length);
 			if (sliced === excludedFolder) {
