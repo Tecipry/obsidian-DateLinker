@@ -3,14 +3,15 @@ import {
 	PluginSettingTab,
 	SettingDefinitionItem,
 } from 'obsidian';
-import MyPlugin from './main';
-import { AddEntryModal } from './modals';
+import MyPlugin from '../main';
+import { AddEntryModal, FolderSuggestModal } from './modals';
 
 export interface DateLinkerSettings {
 	watchedPropertysFrontmatterFieldName: string;
 	managedRelationsPropertyName: string;
 	automaticallyWatchFilesForFrontmatterChanges: boolean;
 	globallyWatchedProperties: Array<string>;
+	excludedFolders: Array<string>;
 }
 
 export const DEFAULT_SETTINGS: DateLinkerSettings = {
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: DateLinkerSettings = {
 	managedRelationsPropertyName: 'DL-managedRelations',
 	automaticallyWatchFilesForFrontmatterChanges: false,
 	globallyWatchedProperties: [],
+	excludedFolders: [],
 };
 
 export class DateLinkerSettingTab extends PluginSettingTab {
@@ -28,21 +30,35 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	private openAddFolderModal() {
+		new FolderSuggestModal(this.app, (folder) => {
+			const folders = this.plugin.settings.excludedFolders;
+			if (folders.includes(folder.path)) return; // filter duplicates
+
+			folders.push(folder.path);
+			void this.plugin.saveData(this.plugin.settings);
+			this.update();
+		}).open();
+	}
+
+	private openAddGlobalPropertyModal() {
+		new AddEntryModal(this.app, 'Name of property', (entry: string) => {
+			const properties = this.plugin.settings.globallyWatchedProperties;
+			properties.push(entry);
+			// convert to set and back to array -> ensure unique entries
+			this.plugin.settings.globallyWatchedProperties =
+				Array.from(new Set(properties));
+
+			void this.plugin.saveData(this.plugin.settings);
+			this.update();
+		}).open();
+	};
+
 	getSettingDefinitions(): SettingDefinitionItem<string>[] {
-		let globallyWatchedProperties: string[] =
-			this.plugin.settings.globallyWatchedProperties ?? [];
+		// let globallyWatchedProperties: string[] =
+		// 	this.plugin.settings.globallyWatchedProperties ?? [];
 
-		let openAddGlobalPropertyModal = () => {
-			new AddEntryModal(this.app, 'Name of property', (entry: string) => {
-				globallyWatchedProperties.push(entry);
-				// convert to set and back to array -> ensure unique entries
-				this.plugin.settings.globallyWatchedProperties =
-					Array.from(new Set(globallyWatchedProperties));
-
-				void this.plugin.saveData(this.plugin.settings);
-				this.update();
-			}).open();
-		};
+		const settings = this.plugin.settings;
 
 		return [
 			{
@@ -76,21 +92,47 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 				emptyState: 'No globally watched properties yet.',
 				addItem: {
 					name: 'Add property',
-					action: openAddGlobalPropertyModal,
+					action: () => this.openAddGlobalPropertyModal(),
 				},
 				onDelete: (index: number) => {
-					this.plugin.settings.globallyWatchedProperties.splice(
+					settings.globallyWatchedProperties.splice(
 						index,
 						1,
 					);
-					void this.plugin.saveData(this.plugin.settings); // will fail silently in case of error
+					void this.plugin.saveData(settings);
 					this.update();
 				},
-				items: globallyWatchedProperties.map((property, index) => ({
+				items: settings.globallyWatchedProperties.map((property) => ({
 					name: property || 'Property',
 					searchable: false,
 				})),
 			},
+			{
+				type: 'list',
+				heading: 'Excluded Folders',
+				desc: '...',
+				emptyState: 'No excluded folders yet.',
+				addItem: {
+					name: 'Add excluded folder',
+					action: () => this.openAddFolderModal(),
+				},
+				onDelete: (index: number) => {
+					settings.excludedFolders.splice(
+						index, 
+						1,
+					);
+					void this.plugin.saveData(settings);
+					this.update();
+				},
+				items: settings.excludedFolders.map((path) => ({
+					name: path,
+					searchable: false,
+				})),
+			},
+			// {
+			// 	name: 'Output folder',
+			// 	control: { type: 'folder', key: 'outputDir', includeRoot: true },
+			// },
 		];
 	}
 }

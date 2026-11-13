@@ -3,7 +3,7 @@ import {
 	DEFAULT_SETTINGS,
 	DateLinkerSettings,
 	DateLinkerSettingTab,
-} from './settings';
+} from './settings/settings';
 import {
 	getDailyNoteSettings,
 	IPeriodicNoteSettings,
