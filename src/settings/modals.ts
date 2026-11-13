@@ -1,11 +1,8 @@
 import { App, Modal, Setting, FuzzySuggestModal, TFolder } from 'obsidian';
+import { getAllTagsInVault } from '../tagHelper';
 
 export class AddEntryModal extends Modal {
-	constructor(
-		app: App,
-		name: string,
-		onSubmit: (result: string) => void
-	) {
+	constructor(app: App, name: string, onSubmit: (result: string) => void) {
 		super(app);
 
 		let input = '';
@@ -30,10 +27,10 @@ export class AddEntryModal extends Modal {
 export class FolderSuggestModal extends FuzzySuggestModal<TFolder> {
 	constructor(
 		app: App,
-		private onChoose: (folder: TFolder) => void
+		private onChoose: (folder: TFolder) => void,
 	) {
 		super(app);
-		this.setPlaceholder("Select a folder…");
+		this.setPlaceholder('Select a folder…');
 	}
 
 	getItems(): TFolder[] {
@@ -46,5 +43,27 @@ export class FolderSuggestModal extends FuzzySuggestModal<TFolder> {
 
 	onChooseItem(folder: TFolder): void {
 		this.onChoose(folder);
+	}
+}
+
+export class TagSuggestModal extends FuzzySuggestModal<string> {
+	constructor(
+		app: App,
+		private onChoose: (tag: string) => void,
+	) {
+		super(app);
+		this.setPlaceholder('Select a tag...');
+	}
+
+	getItems(): string[] {
+		return getAllTagsInVault(this.app);
+	}
+
+	getItemText(item: string): string {
+		return item;
+	}
+
+	onChooseItem(item: string): void {
+		this.onChoose(item);
 	}
 }

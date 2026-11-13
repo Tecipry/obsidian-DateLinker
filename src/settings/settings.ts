@@ -1,10 +1,6 @@
-import {
-	App,
-	PluginSettingTab,
-	SettingDefinitionItem,
-} from 'obsidian';
+import { App, PluginSettingTab, SettingDefinitionItem } from 'obsidian';
 import MyPlugin from '../main';
-import { AddEntryModal, FolderSuggestModal } from './modals';
+import { AddEntryModal, FolderSuggestModal, TagSuggestModal } from './modals';
 
 export interface DateLinkerSettings {
 	watchedPropertysFrontmatterFieldName: string;
@@ -12,6 +8,7 @@ export interface DateLinkerSettings {
 	automaticallyWatchFilesForFrontmatterChanges: boolean;
 	globallyWatchedProperties: Array<string>;
 	excludedFolders: Array<string>;
+	excludedTags: Array<string>;
 }
 
 export const DEFAULT_SETTINGS: DateLinkerSettings = {
@@ -20,6 +17,7 @@ export const DEFAULT_SETTINGS: DateLinkerSettings = {
 	automaticallyWatchFilesForFrontmatterChanges: false,
 	globallyWatchedProperties: [],
 	excludedFolders: [],
+	excludedTags: [],
 };
 
 export class DateLinkerSettingTab extends PluginSettingTab {
@@ -33,9 +31,21 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 	private openAddFolderModal() {
 		new FolderSuggestModal(this.app, (folder) => {
 			const folders = this.plugin.settings.excludedFolders;
-			if (folders.includes(folder.path)) return; // filter duplicates
+			if (folders.includes(folder.path)) return;
 
 			folders.push(folder.path);
+			void this.plugin.saveData(this.plugin.settings);
+			this.update();
+		}).open();
+	}
+
+	private openAddTagModal() {
+		console.log('openAddTagModal');
+		new TagSuggestModal(this.app, (tag) => {
+			const tags = this.plugin.settings.excludedTags;
+			if (tags.includes(tag)) return;
+
+			tags.push(tag);
 			void this.plugin.saveData(this.plugin.settings);
 			this.update();
 		}).open();
@@ -46,13 +56,14 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 			const properties = this.plugin.settings.globallyWatchedProperties;
 			properties.push(entry);
 			// convert to set and back to array -> ensure unique entries
-			this.plugin.settings.globallyWatchedProperties =
-				Array.from(new Set(properties));
+			this.plugin.settings.globallyWatchedProperties = Array.from(
+				new Set(properties),
+			);
 
 			void this.plugin.saveData(this.plugin.settings);
 			this.update();
 		}).open();
-	};
+	}
 
 	getSettingDefinitions(): SettingDefinitionItem<string>[] {
 		const settings = this.plugin.settings;
@@ -92,10 +103,7 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 					action: () => this.openAddGlobalPropertyModal(),
 				},
 				onDelete: (index: number) => {
-					settings.globallyWatchedProperties.splice(
-						index,
-						1,
-					);
+					settings.globallyWatchedProperties.splice(index, 1);
 					void this.plugin.saveData(settings);
 					this.update();
 				},
@@ -114,15 +122,31 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 					action: () => this.openAddFolderModal(),
 				},
 				onDelete: (index: number) => {
-					settings.excludedFolders.splice(
-						index, 
-						1,
-					);
+					settings.excludedFolders.splice(index, 1);
 					void this.plugin.saveData(settings);
 					this.update();
 				},
 				items: settings.excludedFolders.map((path) => ({
 					name: path,
+					searchable: false,
+				})),
+			},
+			{
+				type: 'list',
+				heading: 'Excluded Tags',
+				desc: 'Notes with any of these tags will be excluded when processsing.',
+				emptyState: 'No excluded tags yet.',
+				addItem: {
+					name: 'Add excluded tag',
+					action: () => this.openAddTagModal(),
+				},
+				onDelete: (index: number) => {
+					settings.excludedTags.splice(index, 1);
+					void this.plugin.saveData(settings);
+					this.update();
+				},
+				items: settings.excludedTags.map((tag) => ({
+					name: tag,
 					searchable: false,
 				})),
 			},
