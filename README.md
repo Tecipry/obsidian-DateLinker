@@ -69,3 +69,6 @@ There is also a toggle in the settings page to automatically update the managed 
 Having this toggle enabled is the same as using `Update managed relations for this file` after every frontmatter edit of a file.
 The plugin will only mass-edit frontmatter if you invoke the `Update managed relations for all files` command.
 
+## Exclusions
+You can exclude notes from being processed based on folders or tags.
+These can be configured in the settings.
