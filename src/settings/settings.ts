@@ -40,7 +40,6 @@ export class DateLinkerSettingTab extends PluginSettingTab {
 	}
 
 	private openAddTagModal() {
-		console.log('openAddTagModal');
 		new TagSuggestModal(this.app, (tag) => {
 			const tags = this.plugin.settings.excludedTags;
 			if (tags.includes(tag)) return;
